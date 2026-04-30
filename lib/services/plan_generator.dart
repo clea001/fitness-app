@@ -22,10 +22,11 @@ class PlanGenerator {
       "exercises": [
         {
           "name": "动作名称",
-          "sets": "组数",
-          "reps": "次数",
+          "sets": "组数（如3组）",
+          "reps": "次数（如12次）",
           "rest": "休息时间",
-          "note": "注意事项"
+          "note": "注意事项",
+          "calories": 50
         }
       ],
       "tips": "当日小贴士"
@@ -34,7 +35,8 @@ class PlanGenerator {
 }
 
 注意：
-- 包含休息日
+- calories 是该动作的预估消耗卡路里（整数），根据组数、次数、运动强度合理估算
+- 包含休息日（exercises 为空数组，calories 不需要）
 - 动作要具体可行
 - 根据用户水平调整难度
 - 中文回复''';

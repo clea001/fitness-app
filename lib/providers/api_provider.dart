@@ -27,7 +27,9 @@ class ApiProvider extends ChangeNotifier {
 
   Future<void> updateConfig(ApiConfig newConfig) async {
     _config = newConfig;
-    await _config.save();
+    try {
+      await _config.save();
+    } catch (_) {}
     _initServices();
     notifyListeners();
   }

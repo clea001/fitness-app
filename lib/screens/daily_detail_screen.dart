@@ -304,8 +304,9 @@ class _DailyDetailScreenState extends State<DailyDetailScreen> {
               child: Row(
                 children: [
                   const Expanded(flex: 3, child: Text('动作', style: TextStyle(fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w600))),
-                  Expanded(flex: 2, child: Text('组×次', style: const TextStyle(fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('休息', style: const TextStyle(fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+                  const Expanded(flex: 2, child: Text('组×次', style: TextStyle(fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
+                  Expanded(flex: 2, child: Text('消耗', style: const TextStyle(fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.center)),
+                  const Expanded(flex: 2, child: Text('休息', style: TextStyle(fontSize: 11, color: AppColors.textHint, fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
                 ],
               ),
             ),
@@ -320,6 +321,11 @@ class _DailyDetailScreenState extends State<DailyDetailScreen> {
                     children: [
                       Expanded(flex: 3, child: Text(e.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary))),
                       Expanded(flex: 2, child: Text('${e.sets} × ${e.reps}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary), textAlign: TextAlign.center)),
+                      Expanded(flex: 2, child: Text(
+                        e.calories != null && e.calories! > 0 ? '${e.calories}kcal' : '-',
+                        style: const TextStyle(fontSize: 11, color: AppColors.primaryDark, fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      )),
                       Expanded(flex: 2, child: Text(e.rest, style: const TextStyle(fontSize: 11, color: AppColors.textHint), textAlign: TextAlign.right)),
                     ],
                   ),

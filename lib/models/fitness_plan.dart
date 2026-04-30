@@ -62,6 +62,7 @@ class Exercise {
   final String reps;
   final String rest;
   final String? note;
+  final int? calories;
 
   Exercise({
     required this.name,
@@ -69,6 +70,7 @@ class Exercise {
     required this.reps,
     this.rest = '60秒',
     this.note,
+    this.calories,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
@@ -78,6 +80,7 @@ class Exercise {
       reps: json['reps'] ?? '',
       rest: json['rest'] ?? '60秒',
       note: json['note'],
+      calories: json['calories'] is int ? json['calories'] : (json['calories'] is double ? (json['calories'] as double).toInt() : null),
     );
   }
 
@@ -87,5 +90,6 @@ class Exercise {
         'reps': reps,
         'rest': rest,
         if (note != null) 'note': note,
+        if (calories != null) 'calories': calories,
       };
 }

@@ -17,6 +17,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
   late TextEditingController _apiKeyController;
   late TextEditingController _modelController;
   late TextEditingController _imageModelController;
+  bool _isSaving = false;
   bool _isTesting = false;
   String? _testResult;
 
@@ -39,31 +40,67 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     super.dispose();
   }
 
+  ApiConfig _buildConfig() {
+    return ApiConfig(
+      baseUrl: _baseUrlController.text.trim(),
+      apiKey: _apiKeyController.text.trim(),
+      model: _modelController.text.trim(),
+      imageModel: _imageModelController.text.trim(),
+    );
+  }
+
   Future<void> _testConnection() async {
     setState(() {
       _isTesting = true;
       _testResult = null;
     });
 
-    await _saveConfig();
-
-    final apiProvider = context.read<ApiProvider>();
-    final result = await apiProvider.testConnection();
-
-    setState(() {
-      _isTesting = false;
-      _testResult = result ? '连接成功！' : '连接失败，请检查配置';
-    });
+    try {
+      final apiProvider = context.read<ApiProvider>();
+      await apiProvider.updateConfig(_buildConfig());
+      final result = await apiProvider.testConnection();
+      if (!mounted) return;
+      setState(() {
+        _isTesting = false;
+        _testResult = result ? '连接成功！' : '连接失败，请检查配置';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isTesting = false;
+        _testResult = '测试出错: $e';
+      });
+    }
   }
 
   Future<void> _saveConfig() async {
-    final config = ApiConfig(
-      baseUrl: _baseUrlController.text.trim(),
-      apiKey: _apiKeyController.text.trim(),
-      model: _modelController.text.trim(),
-      imageModel: _imageModelController.text.trim(),
-    );
-    await context.read<ApiProvider>().updateConfig(config);
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
+    try {
+      final apiProvider = context.read<ApiProvider>();
+      await apiProvider.updateConfig(_buildConfig());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('配置已保存'),
+          backgroundColor: AppColors.mint,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('保存失败: $e'),
+          backgroundColor: AppColors.primaryDark,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -77,7 +114,6 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 说明卡片
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -152,7 +188,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                   _imageModelController.text = ApiConfig.defaultImageModel;
                 },
                 icon: const Icon(Icons.restore_rounded, size: 16),
-                label: const Text('恢复默认配置（MiMo）', style: const TextStyle(fontSize: 12)),
+                label: const Text('恢复默认配置（MiMo）', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
               ),
               const SizedBox(height: 24),
@@ -189,22 +225,11 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
               const SizedBox(height: 12),
 
               ElevatedButton.icon(
-                onPressed: () async {
-                  await _saveConfig();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('配置已保存'),
-                        backgroundColor: AppColors.mint,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    );
-                    Navigator.pop(context);
-                  }
-                },
-                icon: const Icon(Icons.save_rounded),
-                label: const Text('保存配置'),
+                onPressed: _isSaving ? null : _saveConfig,
+                icon: _isSaving
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.save_rounded),
+                label: Text(_isSaving ? '保存中...' : '保存配置'),
               ),
             ],
           ),
