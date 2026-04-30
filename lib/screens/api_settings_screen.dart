@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../config/api_config.dart';
 import '../providers/api_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -12,74 +11,8 @@ class ApiSettingsScreen extends StatefulWidget {
 }
 
 class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _baseUrlController;
-  late TextEditingController _apiKeyController;
-  late TextEditingController _modelController;
-  late TextEditingController _imageModelController;
-  bool _isSaving = false;
   bool _isTesting = false;
   String? _testResult;
-
-  @override
-  void initState() {
-    super.initState();
-    final config = context.read<ApiProvider>().config;
-    _baseUrlController = TextEditingController(text: config.baseUrl);
-    _apiKeyController = TextEditingController(text: config.apiKey);
-    _modelController = TextEditingController(text: config.model);
-    _imageModelController = TextEditingController(text: config.imageModel);
-  }
-
-  @override
-  void dispose() {
-    _baseUrlController.dispose();
-    _apiKeyController.dispose();
-    _modelController.dispose();
-    _imageModelController.dispose();
-    super.dispose();
-  }
-
-  ApiConfig _buildConfig() {
-    return ApiConfig(
-      baseUrl: _baseUrlController.text.trim(),
-      apiKey: _apiKeyController.text.trim(),
-      model: _modelController.text.trim(),
-      imageModel: _imageModelController.text.trim(),
-    );
-  }
-
-  Future<void> _saveConfig() async {
-    if (_isSaving) return;
-    if (!mounted) return;
-    setState(() => _isSaving = true);
-
-    try {
-      final config = _buildConfig();
-      // 直接保存文件，不走 provider
-      await config.save();
-      // 再更新 provider（同步操作，不 await）
-      if (mounted) {
-        context.read<ApiProvider>().updateConfigSync(config);
-      }
-    } catch (e) {
-      // 忽略保存错误
-    }
-
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('配置已保存'),
-        backgroundColor: AppColors.mint,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-
-    Navigator.pop(context);
-  }
 
   Future<void> _testConnection() async {
     setState(() {
@@ -88,17 +21,12 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     });
 
     try {
-      final config = _buildConfig();
-      await config.save();
-      if (mounted) {
-        context.read<ApiProvider>().updateConfigSync(config);
-      }
       final apiProvider = context.read<ApiProvider>();
       final result = await apiProvider.testConnection();
       if (!mounted) return;
       setState(() {
         _isTesting = false;
-        _testResult = result ? '连接成功！' : '连接失败，请检查配置';
+        _testResult = result ? '连接成功！' : '连接失败，请检查网络';
       });
     } catch (e) {
       if (!mounted) return;
@@ -111,112 +39,61 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final config = context.read<ApiProvider>().config;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('API 配置')),
+      appBar: AppBar(title: const Text('设置')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.mint.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppColors.mint, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'API 已内置配置，无需手动设置。如需更换请联系开发者。',
+                      style: TextStyle(fontSize: 12, color: AppColors.textBody),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            _buildInfoRow('API 地址', config.baseUrl),
+            _buildInfoRow('模型', config.model),
+            _buildInfoRow('API Key', '${config.apiKey.substring(0, 8)}****'),
+            const SizedBox(height: 24),
+
+            if (_testResult != null)
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.mint.withOpacity(0.1),
+                  color: _testResult!.contains('成功') ? AppColors.mint.withOpacity(0.1) : AppColors.primaryLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: AppColors.mint, size: 20),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        '支持所有 OpenAI 兼容接口，如 DeepSeek、ChatGPT、通义千问等',
-                        style: TextStyle(fontSize: 12, color: AppColors.textBody),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              _buildLabel('API 地址'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _baseUrlController,
-                decoration: const InputDecoration(
-                  hintText: 'https://token-plan-cn.xiaomimimo.com',
-                  prefixIcon: Icon(Icons.link_rounded),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              _buildLabel('API Key'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _apiKeyController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  hintText: '输入你的 API Key',
-                  prefixIcon: Icon(Icons.key_rounded),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              _buildLabel('对话模型'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _modelController,
-                decoration: const InputDecoration(
-                  hintText: 'mimo-v2.5-pro',
-                  prefixIcon: Icon(Icons.smart_toy_rounded),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              _buildLabel('图片生成模型（可选）'),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _imageModelController,
-                decoration: const InputDecoration(
-                  hintText: '留空则使用内置模板',
-                  prefixIcon: Icon(Icons.image_rounded),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              TextButton.icon(
-                onPressed: () {
-                  _baseUrlController.text = ApiConfig.defaultBaseUrl;
-                  _apiKeyController.text = ApiConfig.defaultApiKey;
-                  _modelController.text = ApiConfig.defaultModel;
-                  _imageModelController.text = ApiConfig.defaultImageModel;
-                },
-                icon: const Icon(Icons.restore_rounded, size: 16),
-                label: const Text('恢复默认配置（MiMo）', style: TextStyle(fontSize: 12)),
-                style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 24),
-
-              if (_testResult != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _testResult!.contains('成功') ? AppColors.mint.withOpacity(0.1) : AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _testResult!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: _testResult!.contains('成功') ? const Color(0xFF2E7D32) : AppColors.primaryDark,
-                    ),
+                child: Text(
+                  _testResult!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _testResult!.contains('成功') ? const Color(0xFF2E7D32) : AppColors.primaryDark,
                   ),
                 ),
-              if (_testResult != null) const SizedBox(height: 16),
+              ),
+            if (_testResult != null) const SizedBox(height: 16),
 
-              OutlinedButton.icon(
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
                 onPressed: _isTesting ? null : _testConnection,
                 icon: _isTesting
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
@@ -228,23 +105,28 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                   side: const BorderSide(color: AppColors.mint),
                 ),
               ),
-              const SizedBox(height: 12),
-
-              ElevatedButton.icon(
-                onPressed: _isSaving ? null : _saveConfig,
-                icon: _isSaving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.save_rounded),
-                label: Text(_isSaving ? '保存中...' : '保存配置'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+          ),
+        ],
+      ),
+    );
   }
 }

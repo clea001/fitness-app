@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 
 class ApiConfig {
   static const String defaultBaseUrl = 'https://token-plan-cn.xiaomimimo.com/v1';
-  static const String defaultApiKey = '';
+  static const String defaultApiKey = 'tp-cya70jfowsk7tjt33nvgiaglzx3ru6t7s2kapue52aeqpmfk';
   static const String defaultModel = 'mimo-v2.5-pro';
   static const String defaultImageModel = '';
 

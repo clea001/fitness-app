@@ -1,7 +1,7 @@
 name: fitness_app
 description: AI 健身饮食规划助手
 publish_to: 'none'
-version: 1.2.2+8
+version: 1.2.3+9
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
