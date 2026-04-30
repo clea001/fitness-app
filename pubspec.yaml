@@ -1,7 +1,7 @@
 name: fitness_app
 description: AI 健身饮食规划助手
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -20,6 +20,7 @@ dependencies:
   shimmer: ^3.0.0
   package_info_plus: ^4.2.0
   url_launcher: ^6.2.1
+  open_file: ^3.5.10
 
 dev_dependencies:
   flutter_test:

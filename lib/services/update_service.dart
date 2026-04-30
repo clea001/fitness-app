@@ -1,8 +1,10 @@
-import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_file/open_file.dart';
 
 class UpdateInfo {
   final String version;
@@ -23,6 +25,13 @@ class UpdateService {
   static const String _repo = 'fitness-app';
   static const String _apiUrl = 'https://api.github.com/repos/$_owner/$_repo/releases/latest';
 
+  // 国内加速镜像，按优先级排列
+  static const List<String> _mirrors = [
+    'https://gh-proxy.com/',
+    'https://mirror.ghproxy.com/',
+    'https://ghfast.top/',
+  ];
+
   static Future<UpdateInfo?> checkForUpdate() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
@@ -40,7 +49,6 @@ class UpdateService {
       final body = data['body'] as String? ?? '';
       final publishedAt = data['published_at'] as String? ?? '';
 
-      // 查找 APK 下载链接
       String apkUrl = '';
       final assets = data['assets'] as List? ?? [];
       for (final asset in assets) {
@@ -53,7 +61,6 @@ class UpdateService {
 
       if (tagName.isEmpty || apkUrl.isEmpty) return null;
 
-      // 比较版本
       if (_isNewerVersion(currentVersion, tagName)) {
         return UpdateInfo(
           version: tagName,
@@ -81,10 +88,58 @@ class UpdateService {
     return false;
   }
 
-  static Future<void> downloadUpdate(String url) async {
-    // 国内加速代理，提升 GitHub Release 下载速度
-    final proxiedUrl = 'https://ghfast.top/$url';
-    final uri = Uri.parse(proxiedUrl);
+  // app内下载APK，自动尝试多个镜像
+  static Future<String?> downloadApk(String url, void Function(double) onProgress) async {
+    final tempDir = await getTemporaryDirectory();
+    final savePath = '${tempDir.path}/fitness_app_update.apk';
+
+    // 构建镜像URL列表
+    final urls = <String>[];
+    for (final mirror in _mirrors) {
+      urls.add('$mirror$url');
+    }
+    urls.add(url); // 原始链接作为兜底
+
+    DioException? lastError;
+    for (final downloadUrl in urls) {
+      try {
+        final dio = Dio(BaseOptions(
+          connectTimeout: const Duration(seconds: 8),
+          receiveTimeout: const Duration(minutes: 5),
+        ));
+
+        await dio.download(
+          downloadUrl,
+          savePath,
+          onReceiveProgress: (received, total) {
+            if (total > 0) {
+              onProgress(received / total);
+            }
+          },
+        );
+
+        // 下载成功
+        return savePath;
+      } on DioException catch (e) {
+        lastError = e;
+        continue; // 尝试下一个镜像
+      }
+    }
+
+    throw lastError ?? Exception('所有下载源均失败');
+  }
+
+  // 安装APK
+  static Future<void> installApk(String filePath) async {
+    final result = await OpenFile.open(filePath);
+    if (result.type != ResultType.done) {
+      throw Exception('无法打开APK: ${result.message}');
+    }
+  }
+
+  // 兜底：浏览器打开
+  static Future<void> openInBrowser(String url) async {
+    final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
