@@ -137,11 +137,13 @@ class UpdateService {
     }
   }
 
-  // 兜底：浏览器打开
+  // 兜底：浏览器打开（不检查 canLaunchUrl 避免卡死）
   static Future<void> openInBrowser(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // 静默失败
     }
   }
 }
