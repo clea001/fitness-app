@@ -49,6 +49,38 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     );
   }
 
+  Future<void> _saveConfig() async {
+    if (_isSaving) return;
+    if (!mounted) return;
+    setState(() => _isSaving = true);
+
+    try {
+      final config = _buildConfig();
+      // 直接保存文件，不走 provider
+      await config.save();
+      // 再更新 provider（同步操作，不 await）
+      if (mounted) {
+        context.read<ApiProvider>().updateConfigSync(config);
+      }
+    } catch (e) {
+      // 忽略保存错误
+    }
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('配置已保存'),
+        backgroundColor: AppColors.mint,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
   Future<void> _testConnection() async {
     setState(() {
       _isTesting = true;
@@ -56,8 +88,12 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     });
 
     try {
+      final config = _buildConfig();
+      await config.save();
+      if (mounted) {
+        context.read<ApiProvider>().updateConfigSync(config);
+      }
       final apiProvider = context.read<ApiProvider>();
-      await apiProvider.updateConfig(_buildConfig());
       final result = await apiProvider.testConnection();
       if (!mounted) return;
       setState(() {
@@ -70,36 +106,6 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
         _isTesting = false;
         _testResult = '测试出错: $e';
       });
-    }
-  }
-
-  Future<void> _saveConfig() async {
-    if (_isSaving) return;
-    setState(() => _isSaving = true);
-
-    try {
-      final apiProvider = context.read<ApiProvider>();
-      await apiProvider.updateConfig(_buildConfig());
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('配置已保存'),
-          backgroundColor: AppColors.mint,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('保存失败: $e'),
-          backgroundColor: AppColors.primaryDark,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
   }
 
