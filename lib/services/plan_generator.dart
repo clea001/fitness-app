@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'api_service.dart';
 import '../models/fitness_plan.dart';
 import '../models/diet_plan.dart';
+import '../models/recipe.dart';
 
 class PlanGenerator {
   final ApiService api;
@@ -107,7 +108,7 @@ class PlanGenerator {
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
       return FitnessPlan.fromJson(json);
     } catch (e) {
-      return FitnessPlan(goal: '解析失败', summary: response, days: []);
+      return FitnessPlan(goal: '解析失败', summary: 'AI 返回内容解析出错，请重试。', days: []);
     }
   }
 
@@ -117,14 +118,87 @@ class PlanGenerator {
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
       return DietPlan.fromJson(json);
     } catch (e) {
-      return DietPlan(goal: '解析失败', summary: response, meals: []);
+      return DietPlan(goal: '解析失败', summary: 'AI 返回内容解析出错，请重试。', meals: []);
     }
   }
 
   String _extractJson(String text) {
-    final jsonPattern = RegExp(r'\{[\s\S]*\}');
-    final match = jsonPattern.firstMatch(text);
-    if (match != null) return match.group(0)!;
-    return text;
+    // 去除 markdown 代码块标记
+    var cleaned = text.trim();
+    cleaned = cleaned.replaceAll(RegExp(r'```json\s*'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'```\s*'), '');
+
+    // 尝试直接解析
+    try {
+      jsonDecode(cleaned);
+      return cleaned;
+    } catch (_) {}
+
+    // 提取第一个完整的 JSON 对象（非贪婪匹配最外层花括号）
+    final start = cleaned.indexOf('{');
+    if (start == -1) return cleaned;
+
+    int depth = 0;
+    for (int i = start; i < cleaned.length; i++) {
+      if (cleaned[i] == '{') depth++;
+      if (cleaned[i] == '}') depth--;
+      if (depth == 0) {
+        return cleaned.substring(start, i + 1);
+      }
+    }
+
+    // 兜底：从第一个 { 到最后一个 }
+    final end = cleaned.lastIndexOf('}');
+    if (end > start) return cleaned.substring(start, end + 1);
+    return cleaned;
+  }
+
+  Future<Recipe> generateRecipe(String dishName, String mealType) async {
+    final systemPrompt = '''你是一位专业的家常菜厨师。请根据菜名生成详细的制作流程。
+
+你必须以严格的 JSON 格式回复，不要包含任何其他文字。JSON 格式如下：
+{
+  "name": "菜品名称",
+  "mealType": "餐次",
+  "totalTime": "总用时（如20分钟）",
+  "difficulty": "难度（简单/中等/较难）",
+  "ingredients": [
+    {"name": "食材名", "amount": "用量（如200g）"}
+  ],
+  "steps": [
+    "第1步：xxx",
+    "第2步：xxx"
+  ],
+  "tips": "小贴士"
+}
+
+注意：
+- 食材用量要精确到克/毫升/勺等
+- 步骤要详细可操作
+- 适合家庭制作
+- 中文回复''';
+
+    final messages = <Map<String, String>>[
+      {'role': 'system', 'content': systemPrompt},
+      {'role': 'user', 'content': '请为"$dishName"生成详细做法，这是$mealType的菜品。'},
+    ];
+
+    final response = await api.chat(messages);
+    return _parseRecipe(response, mealType);
+  }
+
+  Recipe _parseRecipe(String response, String mealType) {
+    try {
+      final jsonStr = _extractJson(response);
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return Recipe.fromJson(json);
+    } catch (e) {
+      return Recipe(
+        name: '解析失败',
+        mealType: mealType,
+        ingredients: [],
+        steps: ['AI 返回内容解析出错，请重试'],
+      );
+    }
   }
 }

@@ -123,7 +123,17 @@ class _FitnessResultScreenState extends State<FitnessResultScreen> {
             const SizedBox(height: 16),
             const Text('生成失败', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
-            Text(error, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            Text(
+              error.contains('解析') ? error : '网络或服务异常，请检查 API 配置后重试',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('返回重试'),
+            ),
           ],
         ),
       ),

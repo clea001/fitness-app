@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/daily_record.dart';
 import '../models/fitness_plan.dart';
 import '../models/diet_plan.dart';
+import '../models/recipe.dart';
 
 class StorageService {
   static const String _prefix = 'daily_record_';
@@ -105,5 +106,41 @@ class StorageService {
 
   static String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // 菜谱存储
+  static const String _recipePrefix = 'recipe_';
+
+  static Future<void> saveRecipe(Recipe recipe) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_recipePrefix${recipe.name}';
+    await prefs.setString(key, jsonEncode(recipe.toJson()));
+  }
+
+  static Future<Recipe?> getRecipe(String dishName) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = prefs.getString('$_recipePrefix$dishName');
+    if (json == null) return null;
+    return Recipe.fromJson(jsonDecode(json));
+  }
+
+  static Future<List<Recipe>> getAllRecipes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith(_recipePrefix));
+    final recipes = <Recipe>[];
+    for (final key in keys) {
+      final json = prefs.getString(key);
+      if (json != null) {
+        try {
+          recipes.add(Recipe.fromJson(jsonDecode(json)));
+        } catch (_) {}
+      }
+    }
+    return recipes;
+  }
+
+  static Future<void> deleteRecipe(String dishName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_recipePrefix$dishName');
   }
 }
