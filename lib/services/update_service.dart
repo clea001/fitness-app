@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:open_file/open_file.dart';
 
 class UpdateInfo {
   final String version;
@@ -130,10 +130,21 @@ class UpdateService {
   }
 
   // 安装APK
+  static const _channel = MethodChannel('com.fitness.app/install');
+
   static Future<void> installApk(String filePath) async {
-    final result = await OpenFile.open(filePath);
-    if (result.type != ResultType.done) {
-      throw Exception('无法打开APK: ${result.message}');
+    if (Platform.isAndroid) {
+      try {
+        await _channel.invokeMethod('installApk', {'path': filePath});
+      } catch (e) {
+        // 兜底：用 url_launcher 打开
+        final uri = Uri.parse('file://$filePath');
+        try {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {
+          throw Exception('无法安装APK，请手动安装: $filePath');
+        }
+      }
     }
   }
 
