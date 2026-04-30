@@ -65,14 +65,17 @@ class DailyRecord {
     );
   }
 
-  // 卡路里消耗估算（基于运动类型）
+  // 卡路里消耗估算（基于运动类型、组数、次数）
   static int estimateBurnedCalories(DayPlan dayPlan) {
     int total = 0;
     for (final exercise in dayPlan.exercises) {
       final rate = _calorieBurnRates[exercise.name] ?? 6;
-      // 估算每组约1分钟，加上休息时间
       final sets = int.tryParse(exercise.sets.replaceAll(RegExp(r'[^0-9]'), '')) ?? 3;
-      total += rate * sets;
+      final reps = int.tryParse(exercise.reps.replaceAll(RegExp(r'[^0-9]'), '')) ?? 10;
+      // 每次动作约3-5秒，每组时间 = 次数 × 4秒，加上组间休息30-60秒
+      final secondsPerSet = reps * 4 + 45; // 动作时间 + 休息
+      final totalMinutes = (sets * secondsPerSet) / 60;
+      total += (rate * totalMinutes).round();
     }
     return total;
   }
