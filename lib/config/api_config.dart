@@ -1,13 +1,10 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class ApiConfig {
-  static const String _keyBaseUrl = 'api_base_url';
-  static const String _keyApiKey = 'api_key';
-  static const String _keyModel = 'api_model';
-  static const String _keyImageModel = 'api_image_model';
-
   static const String defaultBaseUrl = 'https://token-plan-cn.xiaomimimo.com/v1';
-  static const String defaultApiKey = '';  // 不再内置，需要用户手动配置
+  static const String defaultApiKey = '';
   static const String defaultModel = 'mimo-v2.5-pro';
   static const String defaultImageModel = '';
 
@@ -25,21 +22,46 @@ class ApiConfig {
 
   bool get isConfigured => apiKey.isNotEmpty;
 
+  static String? _cachedPath;
+
+  static Future<String> _getFilePath() async {
+    if (_cachedPath != null) return _cachedPath!;
+    final dir = await getApplicationDocumentsDirectory();
+    _cachedPath = '${dir.path}/api_config.json';
+    return _cachedPath!;
+  }
+
   Future<void> save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyBaseUrl, baseUrl);
-    await prefs.setString(_keyApiKey, apiKey);
-    await prefs.setString(_keyModel, model);
-    await prefs.setString(_keyImageModel, imageModel);
+    try {
+      final path = await _getFilePath();
+      final file = File(path);
+      await file.writeAsString(jsonEncode(toJson()));
+    } catch (_) {}
   }
 
   static Future<ApiConfig> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    return ApiConfig(
-      baseUrl: prefs.getString(_keyBaseUrl) ?? defaultBaseUrl,
-      apiKey: prefs.getString(_keyApiKey) ?? defaultApiKey,
-      model: prefs.getString(_keyModel) ?? defaultModel,
-      imageModel: prefs.getString(_keyImageModel) ?? defaultImageModel,
-    );
+    try {
+      final path = await _getFilePath();
+      final file = File(path);
+      if (!await file.exists()) return ApiConfig();
+      final jsonStr = await file.readAsString();
+      if (jsonStr.isEmpty) return ApiConfig();
+      final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return ApiConfig(
+        baseUrl: json['baseUrl']?.toString() ?? defaultBaseUrl,
+        apiKey: json['apiKey']?.toString() ?? defaultApiKey,
+        model: json['model']?.toString() ?? defaultModel,
+        imageModel: json['imageModel']?.toString() ?? defaultImageModel,
+      );
+    } catch (_) {
+      return ApiConfig();
+    }
   }
+
+  Map<String, dynamic> toJson() => {
+        'baseUrl': baseUrl,
+        'apiKey': apiKey,
+        'model': model,
+        'imageModel': imageModel,
+      };
 }

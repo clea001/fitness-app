@@ -27,10 +27,11 @@ class ApiProvider extends ChangeNotifier {
 
   Future<void> updateConfig(ApiConfig newConfig) async {
     _config = newConfig;
+    _initServices();
+    // 先保存，保存完成后再通知
     try {
       await _config.save();
     } catch (_) {}
-    _initServices();
     notifyListeners();
   }
 
