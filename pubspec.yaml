@@ -1,0 +1,33 @@
+name: fitness_app
+description: AI 健身饮食规划助手
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  dio: ^5.4.0
+  shared_preferences: ^2.2.2
+  screenshot: ^3.0.0
+  path_provider: ^2.1.2
+  gal: ^2.3.0
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.3.0
+  shimmer: ^3.0.0
+  package_info_plus: ^4.2.0
+  url_launcher: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/templates/
+    - assets/images/

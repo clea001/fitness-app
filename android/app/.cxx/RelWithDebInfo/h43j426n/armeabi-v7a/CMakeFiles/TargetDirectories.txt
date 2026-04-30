@@ -1,0 +1,2 @@
+E:/claude/APKCAIDAN/fitness_app/android/app/.cxx/RelWithDebInfo/h43j426n/armeabi-v7a/CMakeFiles/edit_cache.dir
+E:/claude/APKCAIDAN/fitness_app/android/app/.cxx/RelWithDebInfo/h43j426n/armeabi-v7a/CMakeFiles/rebuild_cache.dir
