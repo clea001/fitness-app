@@ -82,7 +82,9 @@ class UpdateService {
   }
 
   static Future<void> downloadUpdate(String url) async {
-    final uri = Uri.parse(url);
+    // 国内加速代理，提升 GitHub Release 下载速度
+    final proxiedUrl = 'https://ghfast.top/$url';
+    final uri = Uri.parse(proxiedUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
